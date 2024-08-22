@@ -209,7 +209,7 @@ namespace xymlib {
       decltype(T::xym_serialize_impl::template name<N>()),
       char*, const char*, char* const
     >::value;
-  }; // todo
+  };
 }
 
 #endif //XYMLIB_C__20_XYM_CONCEPTS_H
