@@ -10,6 +10,11 @@
 namespace xymlib {
 
   namespace _meta {
+    template<typename = void>
+    struct do_nothing
+    {
+    };
+
     template<typename T, typename ...Ts>
     struct same_or
     {
@@ -54,6 +59,9 @@ namespace xymlib {
       using type = Tuple;
     };
 
+    template<typename T>
+    struct type_of_t;
+
     template<std::size_t N, typename ...Ts>
     struct type_conjunction;
 
@@ -63,6 +71,11 @@ namespace xymlib {
     template<typename ...Ts>
     struct apply;
 
+    /**
+     * 对类型合取以指定方式使用运算，其等价于：<br/>
+     *
+     * <code>Apply\<type1\>::value && Apply\<type2\>::value && Apply\<type3\>::value && ...</code>
+     * */
     template<template<class> typename Apply, std::size_t N, typename ...Ts>
     struct apply<Apply<type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>
       : apply<Apply<type_conjunction<N - 1, Ts...>>, type_conjunction<N - 1, Ts...>>
@@ -101,72 +114,52 @@ namespace xymlib {
           typename type_disjunction<0, Ts...>::type_list, 0>>::value;
     };
 
+    /**
+     * 对类型以指定运算进行合取
+     * <br/>
+     * <code>N=1</code>时<code>this_type::value</code>与<code>type_disjunction::value</code>相同
+     *
+     * @tparam N 所要合取的类型的数量
+     * @tparam Ts 所要合取的所有类型
+     * */
     template<std::size_t N, typename ...Ts>
     struct type_conjunction
     {
+
+      using this_type = type_conjunction<N, Ts...>;
+
       static constexpr std::size_t numbers = N;
       using type_list = type_tuple<Ts...>;
+
 
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>::value;
 
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator||(type_disjunction<N_other, Tss...> other)
-      {
-        return type_disjunction<N, Tss...>::value || value<Apply>;
-      }
 
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator||(type_conjunction<N_other, Tss...> other)
-      {
-        return type_conjunction<N, Tss...>::value || value<Apply>;
-      }
-
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator&&(type_disjunction<N_other, Tss...> other)
-      {
-        return type_disjunction<N, Tss...>::value && value<Apply>;
-      }
-
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator&&(type_conjunction<N_other, Tss...> other)
-      {
-        return type_conjunction<N, Tss...>::value && value<Apply>;
-      }
     };
 
+    /**
+     * 对类型以指定运算进行析取
+     * <br/>
+     * <code>N=1</code>时<code>this_type::value</code>与<code>type_conjunction::value</code>相同
+     *
+     * @tparam N 所要析取的类型的数量
+     * @tparam Ts 所要析取的所有类型
+     * */
     template<std::size_t N, typename ...Ts>
     struct type_disjunction
     {
+      using this_type = type_disjunction<N, Ts...>;
+
       static constexpr std::size_t numbers = N;
       using type_list = type_tuple<Ts...>;
 
+      /**
+       * @tparam Apply 对每个类型的运算方式
+       * */
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>::value;
 
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator||(type_disjunction<N_other, Tss...> other)
-      {
-        return type_disjunction<N, Tss...>::value || value<Apply>;
-      }
-
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator||(type_conjunction<N_other, Tss...> other)
-      {
-        return type_conjunction<N, Tss...>::value || value<Apply>;
-      }
-
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator&&(type_disjunction<N_other, Tss...> other)
-      {
-        return type_disjunction<N, Tss...>::value && value<Apply>;
-      }
-
-      template<template<class> typename Apply, std::size_t N_other, typename ...Tss>
-      auto operator&&(type_conjunction<N_other, Tss...> other)
-      {
-        return type_conjunction<N, Tss...>::value && value<Apply>;
-      }
     };
 
     template<typename T>
