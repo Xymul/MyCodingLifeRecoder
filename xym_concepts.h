@@ -70,7 +70,7 @@ namespace xymlib {
     struct type_disjunction;
 
     template<typename ...Ts>
-    struct apply;
+    struct apply; // 这个特化写起来太麻烦了，而且效果南辕北辙，针对二元和多元类型运算的特化就不写了。
 
     /**
      * 对类型合取以指定方式使用运算，其等价于：<br/>
@@ -132,9 +132,9 @@ namespace xymlib {
     {
 
       using this_type = type_conjunction<N, Ts...>;
+      using type_list = type_tuple<Ts...>;
 
       static constexpr std::size_t numbers = N;
-      using type_list = type_tuple<Ts...>;
 
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>::value;
@@ -149,6 +149,14 @@ namespace xymlib {
       constexpr auto operator&&(type_conjunction<N_other, Ts_other...>)
       {
         return type_conjunction<N + N_other, Ts..., Ts_other...>{};
+      }
+
+      // (A && B && C) || (D || E || F) == (A && B && C)
+      // (A && B && C) || (D) == (A && B && C)
+      template<std::size_t N_other, typename ...Ts_other>
+      constexpr auto operator||(type_disjunction<N_other, Ts_other...>)
+      {
+        return this_type{};
       }
 
       template<typename T>
@@ -180,13 +188,31 @@ namespace xymlib {
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>::value;
 
+      template<template<class> typename Apply>
+      constexpr auto get_value()
+      {
+        return std::remove_cvref_t<decltype(*this)>::template value<Apply>;
+      }
+
       template<std::size_t N_other, typename ...Ts_other>
       constexpr auto operator||(type_disjunction<N_other, Ts_other...>)
       {
         return type_disjunction<N + N_other, Ts..., Ts_other...>{};
       }
 
-      template<typename T>
+      // (A || B || C) || (D && E && F) == (D && E && F)
+      // (A || B || C) || (D) == (A || B || C || D)
+      template<std::size_t N_other, typename ...Ts_other>
+      constexpr auto operator||(type_conjunction<N_other, Ts_other...>)
+      {
+        if constexpr (N_other > 1) {
+          return type_conjunction<N_other, Ts_other...>{};
+        } else {
+          return type_disjunction<N_other + N_other, Ts..., Ts_other...>{};
+        }
+      }
+
+        template<typename T>
       constexpr auto operator||(type_of_t<T>)
       {
         return type_disjunction<N + 1, Ts..., type_of_t<T>>{};
