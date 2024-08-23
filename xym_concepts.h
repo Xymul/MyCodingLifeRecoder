@@ -38,7 +38,8 @@ namespace xymlib {
 
     template<>
     struct type_tuple<>
-    {};
+    {
+    };
 
     template<typename T, typename ...Tr>
     struct type_tuple<T, Tr...> : type_tuple<Tr...>
@@ -48,13 +49,13 @@ namespace xymlib {
     };
 
     template<typename Tuple, std::size_t N>
-    struct get_type_in_tuple
+    struct get_tuple_type
     {
-      using type = get_type_in_tuple<typename Tuple::base_type, N - 1>::type;
+      using type = get_tuple_type<typename Tuple::base_type, N - 1>::type;
     };
 
     template<typename Tuple>
-    struct get_type_in_tuple<Tuple, 0>
+    struct get_tuple_type<Tuple, 0>
     {
       using type = Tuple;
     };
@@ -82,17 +83,21 @@ namespace xymlib {
     {
       using base_type = apply<Apply<type_conjunction<N - 1, Ts...>>, type_conjunction<N - 1, Ts...>>;
 
+      // N-1保证不会遇到tuple<>，而且会运算两遍type_tuple<0>，但是对结果无影响。
       static constexpr auto value = Apply<
-        get_type_in_tuple<
-          typename type_conjunction<N, Ts...>::type_list, N>>::value && base_type::value;
+        typename get_tuple_type<
+          typename type_conjunction<N, Ts...>::type_list, N - 1>::type::type::type>::value && base_type::value;
+      // get_tuple_type::type -> tuple_type
+      // tuple_type::type -> type_of_t<T>
+      // type_of_t<T>::type -> T
     };
 
     template<template<class> typename Apply, typename ...Ts>
     struct apply<Apply<type_conjunction<0, Ts...>>, type_conjunction<0, Ts...>>
     {
       static constexpr auto value = Apply<
-        get_type_in_tuple<
-          typename type_conjunction<0, Ts...>::type_list, 0>>::value;
+        typename get_tuple_type<
+          typename type_conjunction<0, Ts...>::type_list, 0>::type::type::type>::value;
     };
 
     template<template<class> typename Apply, std::size_t N, typename ...Ts>
@@ -102,16 +107,16 @@ namespace xymlib {
       using base_type = apply<Apply<type_disjunction<N - 1, Ts...>>, type_disjunction<N - 1, Ts...>>;
 
       static constexpr auto value = Apply<
-        get_type_in_tuple<
-          typename type_disjunction<N, Ts...>::type_list, N>>::value || base_type::value;
+        typename get_tuple_type<
+          typename type_disjunction<N, Ts...>::type_list, N - 1>::type::type::type>::value || base_type::value;
     };
 
     template<template<class> typename Apply, typename ...Ts>
     struct apply<Apply<type_disjunction<0, Ts...>>, type_disjunction<0, Ts...>>
     {
       static constexpr auto value = Apply<
-        get_type_in_tuple<
-          typename type_disjunction<0, Ts...>::type_list, 0>>::value;
+        typename get_tuple_type<
+          typename type_disjunction<0, Ts...>::type_list, 0>::type::type::type>::value;
     };
 
     /**
@@ -131,11 +136,14 @@ namespace xymlib {
       static constexpr std::size_t numbers = N;
       using type_list = type_tuple<Ts...>;
 
-
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>::value;
 
-
+      template<template<class> typename Apply>
+      constexpr auto get_value()
+      {
+        return std::remove_cvref_t<decltype(*this)>::template value<Apply>;
+      }
     };
 
     /**
@@ -166,6 +174,8 @@ namespace xymlib {
     struct type_of_t
     {
       using this_type = type_of_t<T>;
+
+      using type = T;
 
       template<typename U>
       constexpr type_conjunction<2, this_type, type_of_t<U>>
