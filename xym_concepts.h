@@ -144,6 +144,18 @@ namespace xymlib {
       {
         return std::remove_cvref_t<decltype(*this)>::template value<Apply>;
       }
+
+      template<std::size_t N_other, typename ...Ts_other>
+      constexpr auto operator&&(type_conjunction<N_other, Ts_other...>)
+      {
+        return type_conjunction<N + N_other, Ts..., Ts_other...>{};
+      }
+
+      template<typename T>
+      constexpr auto operator&&(type_of_t<T>)
+      {
+        return type_conjunction<N + 1, Ts..., type_of_t<T>>{};
+      }
     };
 
     /**
@@ -168,6 +180,17 @@ namespace xymlib {
       template<template<class> typename Apply>
       static constexpr auto value = apply<Apply<type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>::value;
 
+      template<std::size_t N_other, typename ...Ts_other>
+      constexpr auto operator||(type_disjunction<N_other, Ts_other...>)
+      {
+        return type_disjunction<N + N_other, Ts..., Ts_other...>{};
+      }
+
+      template<typename T>
+      constexpr auto operator||(type_of_t<T>)
+      {
+        return type_disjunction<N + 1, Ts..., type_of_t<T>>{};
+      }
     };
 
     template<typename T>
