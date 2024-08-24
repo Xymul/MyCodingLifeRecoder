@@ -5,16 +5,22 @@
 #ifndef XYMLIB_C__20_XYM_CONCEPTS_H
 #define XYMLIB_C__20_XYM_CONCEPTS_H
 
+#define XYMLIB_MPL_PLACEHOLDER struct
+
 #include <utility>
 
 namespace xymlib {
 
   namespace _meta {
     template<typename = void>
-    struct do_nothing
+    XYMLIB_MPL_PLACEHOLDER do_nothing
     {
     };
 
+    /**
+     * <code>same_or::value</code>等价于<br/>
+     * <code>(std::is_same_v\<T1\> || std::is_same_v\<T2\> || ... || std::is_same_v\<Tn\>)</code>
+     * */
     template<typename T, typename ...Ts>
     struct same_or
     {
@@ -203,12 +209,12 @@ namespace xymlib {
       static constexpr std::size_t numbers = N;
 
       template<template<class> typename Apply>
-      static constexpr auto value = apply<Apply<type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>::value;
+      static constexpr auto value = apply<Apply<this_type>, this_type>::value;
 
       template<template<class> typename Apply>
       constexpr auto get_value()
       {
-        return std::remove_cvref_t<decltype(*this)>::template value<Apply>;
+        return this_type ::template value<Apply>;
       }
 
       template<std::size_t N_other, typename ...Ts_other>
@@ -252,12 +258,12 @@ namespace xymlib {
        * @tparam Apply 对每个类型的运算方式
        * */
       template<template<class> typename Apply>
-      static constexpr auto value = apply<Apply<type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>::value;
+      static constexpr auto value = apply<Apply<this_type>, this_type>::value;
 
       template<template<class> typename Apply>
       constexpr auto get_value()
       {
-        return std::remove_cvref_t<decltype(*this)>::template value<Apply>;
+        return this_type::template value<Apply>;
       }
 
       template<std::size_t N_other, typename ...Ts_other>
@@ -324,12 +330,12 @@ namespace xymlib {
     T::xym_serialize_impl::template name<N>();
 
     _meta::value_of<std::is_same, decltype(T::xym_serialize_impl::template name<N>())>(
-      _meta::type_of<char> || _meta::type_of<const char*> || _meta::type_of<char* const>
+      _meta::type_of<char*> || _meta::type_of<const char*> || _meta::type_of<char* const> || _meta::type_of<const char* const>
     );
 //    _meta::same_or<
 //      decltype(T::xym_serialize_impl::template name<N>()),
-//      char*, const char*, char* const
-//    >::value;
+//      char*, const char*, char* const, const char* const
+//    >::value; // emmmm，哪个简单哪个复杂一眼便知……
   };
 }
 
