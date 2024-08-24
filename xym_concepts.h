@@ -70,7 +70,7 @@ namespace xymlib {
     struct type_disjunction;
 
     template<typename ...Ts>
-    struct apply; // 这个特化写起来太麻烦了，而且效果南辕北辙，针对二元和多元类型运算的特化就不写了。
+    struct apply;
 
     /**
      * 对类型合取以指定方式使用运算，其等价于：<br/>
@@ -118,6 +118,72 @@ namespace xymlib {
         typename get_tuple_type<
           typename type_disjunction<0, Ts...>::type_list, 0>::type::type::type>::value;
     };
+
+    template<template<class, class> typename Apply, typename T, std::size_t N, typename ...Ts>
+    struct apply<Apply<T, type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>
+      : apply<Apply<T, type_conjunction<N - 1, Ts...>>, type_conjunction<N - 1, Ts...>>
+    {
+      using base_type = apply<Apply<T, type_conjunction<N - 1, Ts...>>, type_conjunction<N - 1, Ts...>>;
+
+      static constexpr auto value = Apply<
+        T,
+        typename get_tuple_type<
+          typename type_conjunction<N, Ts...>::type_list, N - 1>::type::type::type>::value && base_type::value;
+    };
+
+    template<template<class, class> typename Apply, typename T, typename ...Ts>
+    struct apply<Apply<T, type_conjunction<0, Ts...>>, type_conjunction<0, Ts...>>
+    {
+      static constexpr auto value = Apply<
+        T,
+        typename get_tuple_type<
+          typename type_disjunction<0, Ts...>::type_list, 0>::type::type::type>::value;
+    };
+
+    template<template<class, class> typename Apply, typename T, std::size_t N, typename ...Ts>
+    struct apply<Apply<T, type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>
+      : apply<Apply<T, type_disjunction<N - 1, Ts...>>, type_disjunction<N - 1, Ts...>>
+    {
+      using base_type = apply<Apply<T, type_disjunction<N - 1, Ts...>>, type_disjunction<N - 1, Ts...>>;
+
+      static constexpr auto value = Apply<
+        T,
+        typename get_tuple_type<
+          typename type_disjunction<N, Ts...>::type_list, N - 1>::type::type::type>::value || base_type::value;
+    };
+
+    template<template<class, class> typename Apply, typename T, typename ...Ts>
+    struct apply<Apply<T, type_disjunction<0, Ts...>>, type_disjunction<0, Ts...>>
+    {
+      static constexpr auto value = Apply<
+        T,
+        typename get_tuple_type<
+          typename type_disjunction<0, Ts...>::type_list, 0>::type::type::type>::value;
+    };
+
+    template<template<class, class> typename Apply, typename T, std::size_t N, typename ...Ts>
+    constexpr auto value_of(type_conjunction<N, Ts...>)
+    {
+      return apply<Apply<T, type_conjunction<N, Ts...>>, type_conjunction<N, Ts...>>::value;
+    }
+
+    template<template<class, class> typename Apply, typename T, std::size_t N, typename ...Ts>
+    constexpr auto value_of(type_disjunction<N, Ts...>)
+    {
+      return apply<Apply<T, type_disjunction<N, Ts...>>, type_disjunction<N, Ts...>>::value;
+    }
+
+    template<template<class> typename Apply, std::size_t N, typename ...Ts>
+    constexpr auto value_of(type_conjunction<N, Ts...>)
+    {
+      return type_conjunction<N, Ts...>::template value<Apply>;
+    }
+
+    template<template<class> typename Apply, std::size_t N, typename ...Ts>
+    constexpr auto value_of(type_disjunction<N, Ts...>)
+    {
+      return type_disjunction<N, Ts...>::template value<Apply>;
+    }
 
     /**
      * 对类型以指定运算进行合取
@@ -212,7 +278,7 @@ namespace xymlib {
         }
       }
 
-        template<typename T>
+      template<typename T>
       constexpr auto operator||(type_of_t<T>)
       {
         return type_disjunction<N + 1, Ts..., type_of_t<T>>{};
@@ -257,10 +323,13 @@ namespace xymlib {
     T::xym_serialize_impl::template get<N>();
     T::xym_serialize_impl::template name<N>();
 
-    _meta::same_or<
-      decltype(T::xym_serialize_impl::template name<N>()),
-      char*, const char*, char* const
-    >::value;
+    _meta::value_of<std::is_same, decltype(T::xym_serialize_impl::template name<N>())>(
+      _meta::type_of<char> || _meta::type_of<const char*> || _meta::type_of<char* const>
+    );
+//    _meta::same_or<
+//      decltype(T::xym_serialize_impl::template name<N>()),
+//      char*, const char*, char* const
+//    >::value;
   };
 }
 
