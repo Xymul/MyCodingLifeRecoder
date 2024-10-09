@@ -29,6 +29,7 @@ data class GeoCoordinate(val longitude: Angle,
         // A ------- B
         // |  x-y    |
         // C ------- D
+        // todo:
 
         val haveReminder = { a: Angle ->
             a.degrees != 0 || a.seconds != 0 || a.minutes != 0
