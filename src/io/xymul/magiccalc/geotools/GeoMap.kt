@@ -11,5 +11,4 @@ data class GeoMap(val fromCoord: GeoCoordinate, val toCoord: GeoCoordinate) {
         TEN_THOUSAND // 1 : 10,000
     }
 
-    // 添加一行注释测试一下提交是否正常
 }
